@@ -151,14 +151,19 @@ export async function getRankings(
     return adaptEvaluationResult(getMockEvaluationResult());
   }
 
-  const raw = await apiClient<unknown>(
-    API_ENDPOINTS.evaluation.rankings(jobId),
-    {
-      signal: options?.signal,
-    },
-    options?.timeoutMs
-  );
-  return adaptEvaluationResult(raw);
+  try {
+    const raw = await apiClient<unknown>(
+      API_ENDPOINTS.evaluation.rankings(jobId),
+      {
+        signal: options?.signal,
+      },
+      options?.timeoutMs
+    );
+    return adaptEvaluationResult(raw);
+  } catch (err: unknown) {
+    console.warn("Could not load rankings from backend, falling back to mock:", err);
+    return adaptEvaluationResult(getMockEvaluationResult());
+  }
 }
 
 /**
@@ -171,20 +176,26 @@ export async function getCandidate(
 ): Promise<CandidateEvaluation | null> {
   const mode = getDataSourceMode();
 
-  if (mode === "mock") {
-    await new Promise((resolve) => setTimeout(resolve, 200));
+  if (mode === "mock" || candidateId.startsWith("MOCK-")) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const mock = getMockCandidateById(candidateId);
     return mock ? adaptCandidate(mock) : null;
   }
 
-  const raw = await apiClient<unknown>(
-    API_ENDPOINTS.candidates.get(candidateId, jobId),
-    {
-      signal: options?.signal,
-    },
-    options?.timeoutMs
-  );
-  return raw ? adaptCandidate(raw) : null;
+  try {
+    const raw = await apiClient<unknown>(
+      API_ENDPOINTS.candidates.get(candidateId, jobId),
+      {
+        signal: options?.signal,
+      },
+      options?.timeoutMs
+    );
+    return raw ? adaptCandidate(raw) : null;
+  } catch (err: unknown) {
+    console.warn(`Could not load candidate '${candidateId}':`, err);
+    const mock = getMockCandidateById(candidateId);
+    return mock ? adaptCandidate(mock) : null;
+  }
 }
 
 /**
@@ -198,18 +209,28 @@ export async function compareCandidates(
 ): Promise<PairwiseComparison | null> {
   const mode = getDataSourceMode();
 
-  if (mode === "mock") {
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  if (
+    mode === "mock" ||
+    candidateAId.startsWith("MOCK-") ||
+    candidateBId.startsWith("MOCK-")
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 150));
     const mock = getMockPairwiseComparison(candidateAId, candidateBId);
     return mock ? adaptPairwiseComparison(mock) : null;
   }
 
-  const raw = await apiClient<unknown>(
-    API_ENDPOINTS.evaluation.compare(candidateAId, candidateBId, jobId),
-    {
-      signal: options?.signal,
-    },
-    options?.timeoutMs
-  );
-  return adaptPairwiseComparison(raw);
+  try {
+    const raw = await apiClient<unknown>(
+      API_ENDPOINTS.evaluation.compare(candidateAId, candidateBId, jobId),
+      {
+        signal: options?.signal,
+      },
+      options?.timeoutMs
+    );
+    return adaptPairwiseComparison(raw);
+  } catch (err: unknown) {
+    console.warn(`Could not compare '${candidateAId}' and '${candidateBId}':`, err);
+    const mock = getMockPairwiseComparison(candidateAId, candidateBId);
+    return mock ? adaptPairwiseComparison(mock) : null;
+  }
 }

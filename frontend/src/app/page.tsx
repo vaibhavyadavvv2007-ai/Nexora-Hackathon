@@ -59,13 +59,25 @@ export default function RecruiterDashboard() {
     // Initial load: populate with initial evaluation dataset
     getRankings()
       .then((res) => {
-        setEvaluationResult(res);
-        if (res.candidates.length > 0) {
+        if (res && res.candidates && res.candidates.length > 0) {
+          setEvaluationResult(res);
           setSelectedCandidateId(res.candidates[0].candidate_id);
           setSelectedCandidate(res.candidates[0]);
           if (res.candidates.length >= 2) {
             setComparisonCandidateAId(res.candidates[0].candidate_id);
             setComparisonCandidateBId(res.candidates[1].candidate_id);
+          }
+        } else {
+          // No backend evaluations yet, load rich demo fixture
+          const fallback = getMockEvaluationResult();
+          setEvaluationResult(fallback);
+          if (fallback.candidates.length > 0) {
+            setSelectedCandidateId(fallback.candidates[0].candidate_id);
+            setSelectedCandidate(fallback.candidates[0]);
+            if (fallback.candidates.length >= 2) {
+              setComparisonCandidateAId(fallback.candidates[0].candidate_id);
+              setComparisonCandidateBId(fallback.candidates[1].candidate_id);
+            }
           }
         }
       })
@@ -77,6 +89,10 @@ export default function RecruiterDashboard() {
         if (fallback.candidates.length > 0) {
           setSelectedCandidateId(fallback.candidates[0].candidate_id);
           setSelectedCandidate(fallback.candidates[0]);
+          if (fallback.candidates.length >= 2) {
+            setComparisonCandidateAId(fallback.candidates[0].candidate_id);
+            setComparisonCandidateBId(fallback.candidates[1].candidate_id);
+          }
         }
       });
   }, []);
@@ -89,10 +105,17 @@ export default function RecruiterDashboard() {
 
     getRankings()
       .then((res) => {
-        setEvaluationResult(res);
-        if (res.candidates.length > 0) {
+        if (res && res.candidates && res.candidates.length > 0) {
+          setEvaluationResult(res);
           setSelectedCandidateId(res.candidates[0].candidate_id);
           setSelectedCandidate(res.candidates[0]);
+        } else {
+          const fallback = getMockEvaluationResult();
+          setEvaluationResult(fallback);
+          if (fallback.candidates.length > 0) {
+            setSelectedCandidateId(fallback.candidates[0].candidate_id);
+            setSelectedCandidate(fallback.candidates[0]);
+          }
         }
       })
       .catch((err) => {
@@ -108,25 +131,40 @@ export default function RecruiterDashboard() {
   useEffect(() => {
     let isCancelled = false;
     if (selectedCandidateId) {
-      getCandidate(selectedCandidateId).then((candidate) => {
-        if (!isCancelled) {
-          setSelectedCandidate(candidate);
-        }
-      });
+      const existing = evaluationResult?.candidates.find(
+        (c) => c.candidate_id === selectedCandidateId
+      );
+      if (existing) {
+        setSelectedCandidate(existing);
+      }
+
+      getCandidate(selectedCandidateId)
+        .then((candidate) => {
+          if (!isCancelled && candidate) {
+            setSelectedCandidate(candidate);
+          }
+        })
+        .catch((err) => {
+          console.warn(`Could not load candidate '${selectedCandidateId}':`, err);
+        });
     }
     return () => {
       isCancelled = true;
     };
-  }, [selectedCandidateId]);
+  }, [selectedCandidateId, evaluationResult]);
 
   // Fetch comparison when comparison candidate IDs change
   useEffect(() => {
     if (isComparing && comparisonCandidateAId && comparisonCandidateBId) {
-      compareCandidates(comparisonCandidateAId, comparisonCandidateBId).then(
-        (comp) => {
-          setCurrentComparison(comp);
-        }
-      );
+      compareCandidates(comparisonCandidateAId, comparisonCandidateBId)
+        .then((comp) => {
+          if (comp) {
+            setCurrentComparison(comp);
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not compare candidates:", err);
+        });
     }
   }, [isComparing, comparisonCandidateAId, comparisonCandidateBId]);
 

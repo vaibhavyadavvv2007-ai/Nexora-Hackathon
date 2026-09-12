@@ -187,10 +187,17 @@ async def get_rankings(
         # Fallback: check if we have an active JD, return empty results
         active_jd = store.get_job(job_id)
         if not active_jd:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No evaluated candidate rankings found. Please upload a JD and run evaluation.",
-            )
+            all_jobs = list(store._jobs.values())
+            if all_jobs:
+                active_jd = all_jobs[0]
+            else:
+                from backend.models.document import JobDescription
+                active_jd = JobDescription(
+                    id="pending",
+                    role_title="No Job Description Uploaded",
+                    source_file="",
+                    raw_text="No job description uploaded yet. Please upload a JD and candidate resumes to run the evaluation.",
+                )
         return EvaluationResultResponse(
             job_description=active_jd,
             candidates=[],
