@@ -1,3 +1,1 @@
-from backend.app.main import app
-
-__all__ = ["app"]
+"""Nexora FastAPI web application package."""

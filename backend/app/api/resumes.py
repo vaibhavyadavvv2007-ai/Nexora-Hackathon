@@ -35,13 +35,13 @@ async def upload_resumes_batch(
     for file in files:
         filename = file.filename or "unknown.pdf"
 
-        # Check format
+        # Ingestion boundary: only process files whose final extension is .pdf
         lower_name = filename.lower()
-        if not (lower_name.endswith(".pdf") or lower_name.endswith(".docx") or lower_name.endswith(".txt")):
+        if not lower_name.endswith(".pdf"):
             failed_items.append(
                 FailedUploadItem(
                     filename=filename,
-                    reason="Unsupported file format. Accepted: .pdf, .docx, .txt",
+                    reason="Unsupported file format: only files with final extension .pdf are supported.",
                 )
             )
             continue

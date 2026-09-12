@@ -21,6 +21,12 @@ async def upload_job_description(file: UploadFile = File(...)) -> JobDescription
             detail="Filename must not be empty.",
         )
 
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file format: Job Description must have final extension .pdf.",
+        )
+
     content = await file.read()
     if not content:
         raise HTTPException(

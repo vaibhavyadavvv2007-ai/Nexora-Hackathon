@@ -18,6 +18,7 @@ Guarantees fault-isolation: a corrupted resume does not abort the batch.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import time
 from typing import BinaryIO, Dict, List, Optional, Tuple, Union
 
@@ -79,21 +80,60 @@ class ShortlistingPipeline:
     ) -> Tuple[List[Resume], List[Dict[str, str]]]:
         """Parse a batch of resumes with fault isolation.
 
+        Only files whose final extension is .pdf are processed.
+        Unsupported file extensions are safely rejected without calling PyMuPDF.
+        Candidate IDs are uniquely derived preferring parsed name, then filename, then fallback.
         A corrupted or failed resume will be logged in failed_resumes,
         allowing healthy resumes in the batch to proceed.
         """
         parsed_resumes: List[Resume] = []
         failed_resumes: List[Dict[str, str]] = []
+        seen_ids: set[str] = set()
 
         for idx, (filename, source) in enumerate(resumes):
-            cand_id = f"{id_prefix}_{idx + 1:03d}"
+            # Ingestion boundary: only process files with final extension .pdf
+            # Handles names like Resume1.pdf vs Resume1.xml vs Resume1.pdf.xml
+            lower_name = filename.lower()
+            if not lower_name.endswith(".pdf"):
+                failed_resumes.append({
+                    "filename": filename,
+                    "reason": "Unsupported file format: only files with final extension .pdf are supported.",
+                })
+                continue
+
+            # Safe initial candidate ID based on index and filename
+            safe_stem = re.sub(r"[^a-zA-Z0-9_]", "_", Path(filename).stem).lower().strip("_")
+            initial_cand_id = f"{id_prefix}_{idx + 1:03d}_{safe_stem}" if safe_stem else f"{id_prefix}_{idx + 1:03d}"
+
             try:
                 resume = self.parse_resume(
                     source=source,
-                    candidate_id=cand_id,
+                    candidate_id=initial_cand_id,
                     candidate_name=None,
                 )
                 resume.source_file = filename
+
+                # Candidate Identification:
+                # Prefer: 1. parsed candidate name when available
+                #         2. safe filename-derived identifier
+                #         3. unique fallback identifier
+                # Ensure two files with similar names never collide
+                if resume.name and not resume.name.startswith("Candidate_"):
+                    clean_name = re.sub(r"[^a-zA-Z0-9_]", "_", resume.name.strip().lower()).strip("_")
+                    base_id = f"cand_{clean_name}"
+                elif safe_stem:
+                    base_id = f"cand_{safe_stem}"
+                else:
+                    base_id = f"{id_prefix}_{idx + 1:03d}"
+
+                cand_id = base_id
+                dup_counter = 1
+                while cand_id in seen_ids:
+                    cand_id = f"{base_id}_{dup_counter}"
+                    dup_counter += 1
+
+                resume.candidate_id = cand_id
+                seen_ids.add(cand_id)
                 parsed_resumes.append(resume)
             except Exception as exc:
                 failed_resumes.append({
