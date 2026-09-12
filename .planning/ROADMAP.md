@@ -23,7 +23,7 @@
 
 - [ ] **Phase 4: Score Fusion & Deterministic Ranking**
   - Implement fusion scoring formula:
-    $$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.10 \times S_{\text{pref}} + 0.25 \times S_{\text{keyword}} + 0.30 \times S_{\text{semantic}}$$
+    $$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.35 \times S_{\text{semantic}} + 0.20 \times S_{\text{lexical}} + 0.10 \times S_{\text{pref}}$$
   - Implement deterministic sorting with explicit tie-breaker rules.
   - Construct comprehensive `EvaluationRecord` capturing all intermediate signals, component scores, and evidence pointers.
 

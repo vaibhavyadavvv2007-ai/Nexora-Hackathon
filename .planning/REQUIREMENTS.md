@@ -37,12 +37,12 @@ Nexora evaluates and ranks candidate resumes against a Job Description (JD) usin
 
 ### 2.3 Scoring & Ranking (SCR)
 - **SCR-01**: Deterministic score fusion using the exact formula:
-  $$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.10 \times S_{\text{pref}} + 0.25 \times S_{\text{keyword}} + 0.30 \times S_{\text{semantic}}$$
+  $$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.35 \times S_{\text{semantic}} + 0.20 \times S_{\text{lexical}} + 0.10 \times S_{\text{pref}}$$
 - **SCR-02**: Calculate and record all individual component scores:
   - Required skill coverage ($S_{\text{req}}$)
+  - Semantic requirement alignment ($S_{\text{semantic}}$)
+  - Contextual lexical relevance ($S_{\text{lexical}}$)
   - Preferred skill coverage ($S_{\text{pref}}$)
-  - Keyword score ($S_{\text{keyword}}$)
-  - Semantic score ($S_{\text{semantic}}$)
 - **SCR-03**: Produce deterministic ranking of all candidates from highest to lowest final score with tie-breaking rules (e.g. required skill coverage as primary tie-breaker).
 - **SCR-04**: Store full evaluation records (metadata, scores, evidence quotes, matched skills, missing required skills) for every candidate.
 

@@ -93,6 +93,17 @@ class Settings(BaseSettings):
     )
 
     @model_validator(mode="after")
+    def validate_semantic_thresholds_order(self) -> "Settings":
+        if not (self.SEMANTIC_INFERRED_THRESHOLD < self.SEMANTIC_SIMILARITY_THRESHOLD < self.SEMANTIC_EXACT_THRESHOLD):
+            raise ValueError(
+                f"Invalid semantic threshold ordering: expected "
+                f"SEMANTIC_INFERRED_THRESHOLD ({self.SEMANTIC_INFERRED_THRESHOLD}) < "
+                f"SEMANTIC_SIMILARITY_THRESHOLD ({self.SEMANTIC_SIMILARITY_THRESHOLD}) < "
+                f"SEMANTIC_EXACT_THRESHOLD ({self.SEMANTIC_EXACT_THRESHOLD})."
+            )
+        return self
+
+    @model_validator(mode="after")
     def validate_weights_sum(self) -> "Settings":
         total = (
             self.WEIGHT_REQUIRED_SKILL_COVERAGE

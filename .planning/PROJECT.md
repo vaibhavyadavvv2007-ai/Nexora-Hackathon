@@ -52,15 +52,15 @@ Resume PDF Extraction (PyMuPDF)
 
 ### 4. Score Fusion Formula
 The overall candidate score is computed deterministically:
-$$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.10 \times S_{\text{pref}} + 0.25 \times S_{\text{keyword}} + 0.30 \times S_{\text{semantic}}$$
+$$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.35 \times S_{\text{semantic}} + 0.20 \times S_{\text{lexical}} + 0.10 \times S_{\text{pref}}$$
 
 Where:
-- $S_{\text{req}}$ = Required skill coverage ratio $[0.0, 1.0]$
-- $S_{\text{pref}}$ = Preferred skill coverage ratio $[0.0, 1.0]$
-- $S_{\text{keyword}}$ = Section-weighted normalized keyword score $[0.0, 1.0]$
-- $S_{\text{semantic}}$ = Aggregated semantic alignment score across requirement chunks $[0.0, 1.0]$
+- $S_{\text{req}}$ = Explicit named required skill coverage ratio $[0.0, 1.0]$
+- $S_{\text{semantic}}$ = Semantic requirement-to-evidence alignment $[0.0, 1.0]$
+- $S_{\text{lexical}}$ = BM25/lexical context relevance $[0.0, 1.0]$
+- $S_{\text{pref}}$ = Explicit named preferred skill coverage ratio $[0.0, 1.0]$
 
-**Critical Integrity Requirement**: All intermediate component scores, extracted evidence chunks, and matched/missing skill lists must be persisted in candidate evaluation records.
+**Critical Integrity Requirement**: All intermediate component scores, extracted evidence chunks, and matched/missing skill lists must be persisted in candidate evaluation records. Contextual lexical relevance must not simply duplicate required skill coverage.
 
 ---
 
@@ -84,13 +84,12 @@ Where:
 ## Technical Stack & Constraints
 
 ### Approved Tech Stack
-- **Language**: Python 3.10+
+- **Backend Language & Framework**: Python 3.10+, FastAPI, Pydantic
 - **PDF Extraction**: `PyMuPDF` (`fitz`)
 - **Embeddings & Semantic Search**: `sentence-transformers` (`all-MiniLM-L6-v2`), `scikit-learn`
-- **Keyword & Fuzzy Search**: `rapidfuzz`
-- **Data Models & Validation**: `pydantic`
-- **User Interface**: `streamlit` (developed after core engine validation)
+- **Lexical & Fuzzy Search**: `rank-bm25`, `rapidfuzz`
 - **Testing**: `pytest` with synthetic inline fixtures
+- **Frontend (Future)**: Next.js, React, TypeScript, Tailwind CSS (not implemented yet)
 
 ### Strict Scope Boundaries
 - **DO NOT ADD**:

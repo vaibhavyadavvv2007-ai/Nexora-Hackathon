@@ -5,17 +5,19 @@
   "workflow": "gsd",
   "tech_stack": {
     "backend": "python",
+    "framework": "fastapi",
     "pdf_extraction": "PyMuPDF (fitz)",
     "embedding_model": "all-MiniLM-L6-v2",
     "semantic_similarity": "scikit-learn / cosine_similarity",
-    "keyword_matching": "rapidfuzz",
+    "lexical_matching": "rank-bm25",
+    "fuzzy_matching": "rapidfuzz",
     "data_validation": "pydantic",
-    "ui": "streamlit"
+    "frontend": "nextjs"
   },
   "scoring_weights": {
     "required_skill_coverage": 0.35,
-    "preferred_skill_coverage": 0.10,
-    "keyword_score": 0.25,
-    "semantic_score": 0.30
+    "semantic_requirement_alignment": 0.35,
+    "contextual_lexical_relevance": 0.20,
+    "preferred_skill_coverage": 0.10
   }
 }

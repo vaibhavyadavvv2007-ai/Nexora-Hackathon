@@ -20,8 +20,8 @@ The engine uses an approved dual-signal architecture combining genuine keyword m
 
 Key Architectural Safeguards Confirmed:
 1. **No LLM Score Delegation**: Ranking is derived from deterministic math:
-   $$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.10 \times S_{\text{pref}} + 0.25 \times S_{\text{keyword}} + 0.30 \times S_{\text{semantic}}$$
-2. **Dual Signal Materiality**: Both keyword and semantic signals will independently and materially impact candidate ranks.
+   $$\text{Final Score} = 0.35 \times S_{\text{req}} + 0.35 \times S_{\text{semantic}} + 0.20 \times S_{\text{lexical}} + 0.10 \times S_{\text{pref}}$$
+2. **Dual Signal Materiality**: Both keyword/lexical and semantic signals will independently and materially impact candidate ranks.
 3. **Deterministic Explanations**: Zero hallucinated skills or evidence; Top 3 explanations and pairwise comparisons ("Why did Candidate X beat Candidate Y?") will be constructed purely from stored evaluation records.
 4. **Lean Stack**: No databases, no auth, no microservices, no multi-JD complexity.
 
@@ -56,7 +56,7 @@ Define pinned dependencies:
 
 #### [NEW] [src/config.py](file:///c:/Users/yadav/OneDrive/Desktop/nexora/src/config.py)
 Configuration settings class:
-- Fusion weights: `required_skill=0.35`, `preferred_skill=0.10`, `keyword=0.25`, `semantic=0.30`
+- Fusion weights: `required_skill=0.35`, `semantic=0.35`, `lexical=0.20`, `preferred_skill=0.10`
 - Embedding model: `all-MiniLM-L6-v2`
 - Thresholds: semantic similarity cutoffs (`exact >= 0.85`, `related >= 0.70`, `inferred >= 0.55`), rapidfuzz ratio threshold (`>= 85.0`)
 - Section weights: Experience (`1.2`), Projects (`1.0`), Skills (`0.8`), Education (`0.6`)
@@ -66,10 +66,10 @@ Pydantic data models:
 - `EvidenceChunk`: `id`, `text`, `section` (e.g. Experience, Skills), `page_number`, `confidence`
 - `JobDescription`: `id`, `title`, `raw_text`, `required_skills` (list of canonical skill names), `preferred_skills`, `responsibilities`, `requirement_chunks` (list of `EvidenceChunk`)
 - `CandidateResume`: `id`, `name`, `email`, `raw_text`, `sections` (dict of section name to text), `normalized_skills` (list of str), `evidence_chunks` (list of `EvidenceChunk`)
-- `KeywordMatchResult`: `matched_skills`, `missing_required_skills`, `missing_preferred_skills`, `evidence_map`, `raw_keyword_score`
+- `KeywordMatchResult`: `matched_skills`, `missing_required_skills`, `missing_preferred_skills`, `evidence_map`, `raw_lexical_score`
 - `SemanticMatchResult`: `requirement_matches` (mapping each requirement to top evidence chunk + similarity score + match tier), `raw_semantic_score`
-- `ScoreBreakdown`: `required_skill_coverage`, `preferred_skill_coverage`, `keyword_score`, `semantic_score`, `final_score`
-- `EvaluationRecord`: `candidate_id`, `candidate_name`, `score_breakdown`, `matched_skills`, `missing_required_skills`, `missing_preferred_skills`, `top_evidence`, `rank`
+- `ScoreStructure`: `required_skill_coverage`, `semantic_requirement_alignment`, `contextual_lexical_relevance`, `preferred_skill_coverage`, `final_score`
+- `EvaluationRecord`: `candidate_id`, `candidate_name`, `scores` (`ScoreStructure`), `matched_required`, `matched_preferred`, `missing_required`, `semantic_matches`, `keyword_matches`, `evidence`, `rank`
 - `PairwiseComparison`: `candidate_a_id`, `candidate_b_id`, `winner_id`, `score_delta`, `required_skill_delta`, `semantic_evidence_diff`, `explanation`
 
 #### [NEW] [src/interfaces/protocols.py](file:///c:/Users/yadav/OneDrive/Desktop/nexora/src/interfaces/protocols.py)
@@ -112,7 +112,7 @@ Implement text extraction and section segmentation.
 
 ### Phase 4: Deterministic Score Fusion & Ranking Engine
 - [NEW] `src/scoring/fusion.py`:
-  - Implementation of $0.35 \times S_{\text{req}} + 0.10 \times S_{\text{pref}} + 0.25 \times S_{\text{keyword}} + 0.30 \times S_{\text{semantic}}$
+  - Implementation of $0.35 \times S_{\text{req}} + 0.35 \times S_{\text{semantic}} + 0.20 \times S_{\text{lexical}} + 0.10 \times S_{\text{pref}}$
 - [NEW] `src/scoring/ranking.py`:
   - Sorts candidates descending by final score
   - Deterministic tie-breaking rules (required skill coverage, then semantic score)

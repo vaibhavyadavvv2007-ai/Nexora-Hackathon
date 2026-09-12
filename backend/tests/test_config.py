@@ -46,12 +46,57 @@ def test_invalid_weights_sum():
 
 
 def test_configurable_thresholds():
-    """Verify semantic thresholds are configurable."""
+    """Verify semantic thresholds are configurable with valid ordering."""
     custom = Settings(
+        SEMANTIC_INFERRED_THRESHOLD=0.45,
         SEMANTIC_SIMILARITY_THRESHOLD=0.60,
-        SEMANTIC_EXACT_THRESHOLD=0.90,
-        SEMANTIC_INFERRED_THRESHOLD=0.45
+        SEMANTIC_EXACT_THRESHOLD=0.90
     )
+    assert custom.SEMANTIC_INFERRED_THRESHOLD == 0.45
     assert custom.SEMANTIC_SIMILARITY_THRESHOLD == 0.60
     assert custom.SEMANTIC_EXACT_THRESHOLD == 0.90
-    assert custom.SEMANTIC_INFERRED_THRESHOLD == 0.45
+
+
+@pytest.mark.parametrize("inferred,similarity,exact", [
+    (0.65, 0.65, 0.85),  # inferred == similarity
+    (0.70, 0.65, 0.85),  # inferred > similarity
+])
+def test_semantic_thresholds_inferred_ge_similarity(inferred: float, similarity: float, exact: float):
+    """Configuration must fail when inferred threshold >= similarity threshold."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(
+            SEMANTIC_INFERRED_THRESHOLD=inferred,
+            SEMANTIC_SIMILARITY_THRESHOLD=similarity,
+            SEMANTIC_EXACT_THRESHOLD=exact
+        )
+    assert "Invalid semantic threshold ordering" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("inferred,similarity,exact", [
+    (0.50, 0.85, 0.85),  # similarity == exact
+    (0.50, 0.90, 0.85),  # similarity > exact
+])
+def test_semantic_thresholds_similarity_ge_exact(inferred: float, similarity: float, exact: float):
+    """Configuration must fail when similarity threshold >= exact threshold."""
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(
+            SEMANTIC_INFERRED_THRESHOLD=inferred,
+            SEMANTIC_SIMILARITY_THRESHOLD=similarity,
+            SEMANTIC_EXACT_THRESHOLD=exact
+        )
+    assert "Invalid semantic threshold ordering" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("SEMANTIC_INFERRED_THRESHOLD", -0.1),
+    ("SEMANTIC_INFERRED_THRESHOLD", 1.05),
+    ("SEMANTIC_SIMILARITY_THRESHOLD", -0.01),
+    ("SEMANTIC_SIMILARITY_THRESHOLD", 1.2),
+    ("SEMANTIC_EXACT_THRESHOLD", -0.5),
+    ("SEMANTIC_EXACT_THRESHOLD", 1.5),
+])
+def test_semantic_thresholds_outside_bounds(field: str, value: float):
+    """Configuration must fail when any threshold is outside [0, 1]."""
+    with pytest.raises(ValidationError):
+        Settings(**{field: value})
+
