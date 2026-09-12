@@ -87,9 +87,9 @@ class InMemoryStore:
 
     def get_job(self, job_id: Optional[str] = None) -> Optional[JobDescription]:
         with self._lock:
-            if job_id:
+            if job_id and job_id in self._jobs:
                 return self._jobs.get(job_id)
-            if self._latest_job_id:
+            if self._latest_job_id and self._latest_job_id in self._jobs:
                 return self._jobs.get(self._latest_job_id)
             return next(iter(self._jobs.values()), None)
 
@@ -101,21 +101,33 @@ class InMemoryStore:
 
     def save_resume_file(self, job_id: str, filename: str, content: bytes, content_type: str = "application/pdf") -> None:
         with self._lock:
-            if job_id not in self._resume_files:
-                self._resume_files[job_id] = {}
-            self._resume_files[job_id][filename] = UploadedFileRecord(
+            target_id = job_id
+            if target_id not in self._resume_files:
+                self._resume_files[target_id] = {}
+            self._resume_files[target_id][filename] = UploadedFileRecord(
                 filename=filename,
                 content=content,
                 content_type=content_type,
                 size_bytes=len(content)
             )
+            # Also associate with latest job if different
+            if self._latest_job_id and self._latest_job_id != target_id:
+                if self._latest_job_id not in self._resume_files:
+                    self._resume_files[self._latest_job_id] = {}
+                self._resume_files[self._latest_job_id][filename] = self._resume_files[target_id][filename]
 
     def get_resume_files(self, job_id: Optional[str] = None) -> List[UploadedFileRecord]:
         with self._lock:
-            target_id = job_id or self._latest_job_id
-            if not target_id or target_id not in self._resume_files:
-                return []
-            return list(self._resume_files[target_id].values())
+            if job_id and job_id in self._resume_files and self._resume_files[job_id]:
+                return list(self._resume_files[job_id].values())
+            target_id = self._latest_job_id
+            if target_id and target_id in self._resume_files and self._resume_files[target_id]:
+                return list(self._resume_files[target_id].values())
+            # Return any resumes stored under any job key if present
+            for files_dict in self._resume_files.values():
+                if files_dict:
+                    return list(files_dict.values())
+            return []
 
     # ---------------- Parsed Resumes ----------------
 
@@ -203,21 +215,26 @@ class InMemoryStore:
 
     def get_evaluation_result(self, job_id: Optional[str] = None) -> Optional[EvaluationResultRecord]:
         with self._lock:
-            target_id = job_id or self._latest_job_id
-            if not target_id:
-                return next(iter(self._evaluation_results.values()), None)
-            return self._evaluation_results.get(target_id)
+            if job_id and job_id in self._evaluation_results:
+                return self._evaluation_results[job_id]
+            if self._latest_job_id and self._latest_job_id in self._evaluation_results:
+                return self._evaluation_results[self._latest_job_id]
+            return next(iter(self._evaluation_results.values()), None)
 
     def get_candidate_evaluation(
         self, candidate_id: str, job_id: Optional[str] = None
     ) -> Optional[CandidateEvaluation]:
         with self._lock:
             result = self.get_evaluation_result(job_id)
-            if not result:
-                return None
-            for cand in result.candidates:
-                if cand.candidate_id == candidate_id:
-                    return cand
+            if result:
+                for cand in result.candidates:
+                    if cand.candidate_id == candidate_id:
+                        return cand
+            # Also search all evaluation results
+            for res in self._evaluation_results.values():
+                for cand in res.candidates:
+                    if cand.candidate_id == candidate_id:
+                        return cand
             return None
 
     def clear(self) -> None:

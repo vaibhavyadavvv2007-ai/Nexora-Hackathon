@@ -111,9 +111,11 @@ async def start_evaluation(
     jd = store.get_job(job_id)
     if not jd:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Job Description with ID '{job_id}' not found.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active Job Description found. Please upload a Job Description PDF before starting analysis.",
         )
+
+    effective_job_id = jd.id
 
     # If new resume files were submitted alongside start_analysis
     if files:
@@ -122,18 +124,18 @@ async def start_evaluation(
             content = await file.read()
             if content:
                 store.save_resume_file(
-                    job_id=job_id,
+                    job_id=effective_job_id,
                     filename=filename,
                     content=content,
                     content_type=file.content_type or "application/pdf",
                 )
 
-    total_files = len(store.get_resume_files(job_id))
+    total_files = len(store.get_resume_files(effective_job_id))
     task_id = f"eval_{uuid.uuid4().hex[:10]}"
-    store.create_task(task_id=task_id, job_id=job_id, resumes_total=total_files)
+    store.create_task(task_id=task_id, job_id=effective_job_id, resumes_total=total_files)
 
     # Submit background execution
-    background_tasks.add_task(_run_pipeline_worker, job_id, task_id)
+    background_tasks.add_task(_run_pipeline_worker, effective_job_id, task_id)
 
     return StartAnalysisResponse(task_id=task_id, status="processing")
 

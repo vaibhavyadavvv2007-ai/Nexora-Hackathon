@@ -198,30 +198,40 @@ export default function RecruiterDashboard() {
           }
         } else {
           // Real backend flow
+          let effectiveJobId: string | undefined = evaluationResult?.job_description?.id;
           if (jdFile) {
-            await uploadJobDescription(jdFile);
+            const uploadedJd = await uploadJobDescription(jdFile);
+            effectiveJobId = uploadedJd.id;
           }
           if (resumeFiles.length > 0) {
-            await uploadResumes(resumeFiles);
+            await uploadResumes(resumeFiles, effectiveJobId);
           }
-          const task = await startAnalysis("active-job", resumeFiles);
+          const task = await startAnalysis(effectiveJobId || "active-job", resumeFiles);
 
           // Poll status
           let isDone = false;
           while (!isDone) {
             const currentStatus = await getAnalysisStatus(task.task_id);
             setStatus(currentStatus);
-            if (currentStatus.stage === "complete" || currentStatus.stage === "error") {
+            if (currentStatus.stage === "complete") {
               isDone = true;
+            } else if (currentStatus.stage === "error") {
+              isDone = true;
+              throw new Error(currentStatus.message || "Pipeline processing encountered an error.");
             } else {
               await new Promise((r) => setTimeout(r, 1000));
             }
           }
 
-          const res = await getRankings();
-          setEvaluationResult(res);
-          if (res.candidates.length > 0) {
+          const res = await getRankings(effectiveJobId);
+          if (res && res.candidates && res.candidates.length > 0) {
+            setEvaluationResult(res);
             setSelectedCandidateId(res.candidates[0].candidate_id);
+            setSelectedCandidate(res.candidates[0]);
+            if (res.candidates.length >= 2) {
+              setComparisonCandidateAId(res.candidates[0].candidate_id);
+              setComparisonCandidateBId(res.candidates[1].candidate_id);
+            }
           }
         }
       } catch (err: unknown) {
