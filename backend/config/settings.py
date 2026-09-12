@@ -51,7 +51,7 @@ class Settings(BaseSettings):
         description="HuggingFace model tag for local sentence embedding"
     )
     SEMANTIC_SIMILARITY_THRESHOLD: float = Field(
-        default=0.65,
+        default=0.55,
         description="Baseline cosine similarity threshold for semantic candidate evidence",
         ge=0.0,
         le=1.0
@@ -63,7 +63,7 @@ class Settings(BaseSettings):
         le=1.0
     )
     SEMANTIC_INFERRED_THRESHOLD: float = Field(
-        default=0.50,
+        default=0.45,
         description="Threshold for weak/inferred semantic correlation",
         ge=0.0,
         le=1.0

@@ -1,11 +1,12 @@
-from pydantic import BaseModel, Field
+from typing import Any, Optional
+from pydantic import BaseModel, Field, model_validator
 from backend.models.enums import RequirementType
 
 
 class Requirement(BaseModel):
     """Structured requirement extracted from Job Description."""
     id: str = Field(..., description="Unique identifier for the requirement (e.g. req_01)")
-    name: str = Field(..., description="Human-readable requirement label or technology name")
+    name: Optional[str] = Field(default=None, description="Human-readable requirement label or technology name")
     type: RequirementType = Field(..., description="Requirement tier: required, preferred, or responsibility")
     canonical_name: str = Field(..., description="Normalized canonical skill/domain key")
     weight: float = Field(default=1.0, ge=0.0, description="Relative importance weight")
@@ -17,4 +18,12 @@ class Requirement(BaseModel):
         default=True,
         description="Whether this requirement represents a named/normalizable skill that explicit skill matchers should evaluate"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _default_name_to_canonical(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("name") and data.get("canonical_name"):
+                data["name"] = data["canonical_name"].title()
+        return data
 

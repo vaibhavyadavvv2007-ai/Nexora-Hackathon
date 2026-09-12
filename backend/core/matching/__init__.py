@@ -71,3 +71,14 @@ class BaseSemanticMatcher(ABC):
             List of MatchEvidence objects containing cosine similarities and evidence references.
         """
         raise NotImplementedError
+
+
+from backend.core.matching.keyword_matcher import KeywordMatcher
+from backend.core.matching.semantic_matcher import SemanticMatcher
+
+__all__ = [
+    "BaseKeywordMatcher",
+    "BaseSemanticMatcher",
+    "KeywordMatcher",
+    "SemanticMatcher",
+]
