@@ -33,6 +33,17 @@ class Settings(BaseSettings):
         default=[".pdf"],
         description="List of allowed document extensions"
     )
+    MIN_ALPHA_RATIO: float = Field(
+        default=0.40,
+        description="Minimum ratio of alphabetic characters to total characters for clean text",
+        ge=0.0,
+        le=1.0
+    )
+    EMPTY_PAGE_CHAR_THRESHOLD: int = Field(
+        default=10,
+        description="Threshold below which an individual page is flagged as suspiciously empty",
+        ge=0
+    )
 
     # Embedding & Semantic Matching (Configurable placeholders)
     EMBEDDING_MODEL: str = Field(
