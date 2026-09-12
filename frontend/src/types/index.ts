@@ -87,8 +87,8 @@ export interface EvidenceChunk {
  */
 export interface ScoreBreakdown {
   required_skill_coverage: number;       // Weight: 0.35
-  semantic_requirement_alignment: number;// Weight: 0.30
-  contextual_lexical_relevance: number;  // Weight: 0.25
+  semantic_requirement_alignment: number;// Weight: 0.35
+  contextual_lexical_relevance: number;  // Weight: 0.20
   preferred_skill_coverage: number;      // Weight: 0.10
   final_score: number;
 }

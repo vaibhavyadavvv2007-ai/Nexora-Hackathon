@@ -47,8 +47,8 @@ export default function RecruiterDashboard() {
 
   // Pairwise comparison state
   const [isComparing, setIsComparing] = useState(false);
-  const [comparisonCandidateAId, setComparisonCandidateAId] = useState<string>("MOCK-CAND-001");
-  const [comparisonCandidateBId, setComparisonCandidateBId] = useState<string>("MOCK-CAND-002");
+  const [comparisonCandidateAId, setComparisonCandidateAId] = useState<string>("");
+  const [comparisonCandidateBId, setComparisonCandidateBId] = useState<string>("");
   const [currentComparison, setCurrentComparison] = useState<PairwiseComparison | null>(null);
 
   // Ingestion Drawer visibility
@@ -56,7 +56,27 @@ export default function RecruiterDashboard() {
 
   // Synchronize data source mode on mount
   useEffect(() => {
-    // Initial load: populate with initial evaluation dataset
+    const activeMode = getDataSourceMode();
+    setDataMode(activeMode);
+    setErrorMessage(null);
+
+    if (activeMode === "mock") {
+      const fallback = getMockEvaluationResult();
+      setEvaluationResult(fallback);
+      if (fallback.candidates.length > 0) {
+        setSelectedCandidateId(fallback.candidates[0].candidate_id);
+        setSelectedCandidate(fallback.candidates[0]);
+        if (fallback.candidates.length >= 2) {
+          setComparisonCandidateAId(fallback.candidates[0].candidate_id);
+          setComparisonCandidateBId(fallback.candidates[1].candidate_id);
+        }
+      }
+      return;
+    }
+
+    // LIVE API MODE: strictly fetch from backend, never substitute synthetic mock data.
+    // An empty backend (no candidates evaluated yet) must render the clean empty state,
+    // not a placeholder "No Job Description" banner.
     getRankings()
       .then((res) => {
         if (res && res.candidates && res.candidates.length > 0) {
@@ -68,32 +88,15 @@ export default function RecruiterDashboard() {
             setComparisonCandidateBId(res.candidates[1].candidate_id);
           }
         } else {
-          // No backend evaluations yet, load rich demo fixture
-          const fallback = getMockEvaluationResult();
-          setEvaluationResult(fallback);
-          if (fallback.candidates.length > 0) {
-            setSelectedCandidateId(fallback.candidates[0].candidate_id);
-            setSelectedCandidate(fallback.candidates[0]);
-            if (fallback.candidates.length >= 2) {
-              setComparisonCandidateAId(fallback.candidates[0].candidate_id);
-              setComparisonCandidateBId(fallback.candidates[1].candidate_id);
-            }
-          }
+          // Backend reachable but no candidates evaluated yet -> empty state
+          setEvaluationResult(null);
         }
       })
       .catch((err) => {
-        // Fallback to local mock if backend is not running
-        console.warn("Backend unavailable, loading local mock fixture:", err);
-        const fallback = getMockEvaluationResult();
-        setEvaluationResult(fallback);
-        if (fallback.candidates.length > 0) {
-          setSelectedCandidateId(fallback.candidates[0].candidate_id);
-          setSelectedCandidate(fallback.candidates[0]);
-          if (fallback.candidates.length >= 2) {
-            setComparisonCandidateAId(fallback.candidates[0].candidate_id);
-            setComparisonCandidateBId(fallback.candidates[1].candidate_id);
-          }
-        }
+        console.error("Backend request failed in Live API mode:", err);
+        setErrorMessage(
+          `Cannot connect to FastAPI backend at ${API_BASE_URL}. Ensure the backend server is running on port 8000.`
+        );
       });
   }, []);
 
@@ -103,26 +106,41 @@ export default function RecruiterDashboard() {
     setDataMode(newMode);
     setErrorMessage(null);
 
+    if (newMode === "mock") {
+      const fallback = getMockEvaluationResult();
+      setEvaluationResult(fallback);
+      if (fallback.candidates.length > 0) {
+        setSelectedCandidateId(fallback.candidates[0].candidate_id);
+        setSelectedCandidate(fallback.candidates[0]);
+        if (fallback.candidates.length >= 2) {
+          setComparisonCandidateAId(fallback.candidates[0].candidate_id);
+          setComparisonCandidateBId(fallback.candidates[1].candidate_id);
+        }
+      }
+      return;
+    }
+
+    // LIVE API MODE: strictly fetch from backend, never substitute synthetic mock data.
+    // An empty backend (no candidates evaluated yet) must render the clean empty state,
+    // not a placeholder "No Job Description" banner.
     getRankings()
       .then((res) => {
         if (res && res.candidates && res.candidates.length > 0) {
           setEvaluationResult(res);
           setSelectedCandidateId(res.candidates[0].candidate_id);
           setSelectedCandidate(res.candidates[0]);
-        } else {
-          const fallback = getMockEvaluationResult();
-          setEvaluationResult(fallback);
-          if (fallback.candidates.length > 0) {
-            setSelectedCandidateId(fallback.candidates[0].candidate_id);
-            setSelectedCandidate(fallback.candidates[0]);
+          if (res.candidates.length >= 2) {
+            setComparisonCandidateAId(res.candidates[0].candidate_id);
+            setComparisonCandidateBId(res.candidates[1].candidate_id);
           }
+        } else {
+          // Backend reachable but no candidates evaluated yet -> empty state
+          setEvaluationResult(null);
         }
       })
       .catch((err) => {
         setErrorMessage(
-          newMode === "api"
-            ? `Cannot connect to FastAPI backend at ${API_BASE_URL}. Ensure server is running on port 8000 or switch back to Mock Mode.`
-            : `Failed to load mock data: ${err.message}`
+          `Cannot connect to FastAPI backend at ${API_BASE_URL}. Ensure the backend server is running on port 8000.`
         );
       });
   };
@@ -240,7 +258,23 @@ export default function RecruiterDashboard() {
             ? err.message
             : "Pipeline execution failed. Please verify files and service status."
         );
-        setStatus(getMockProcessingStatus("error"));
+        // Live API Mode: build the error status locally instead of reusing mock fixtures,
+        // so no synthetic telemetry (e.g. fake failed_resumes) leaks into Live Mode.
+        setStatus({
+          stage: "error",
+          progress: 0,
+          message:
+            err instanceof Error
+              ? err.message
+              : "Evaluation pipeline encountered a server failure.",
+          jd_processed: false,
+          resumes_processed: 0,
+          resumes_total: 0,
+          semantic_model_status: "error",
+          keyword_engine_status: "error",
+          ranking_status: "error",
+          failed_resumes: [],
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -248,8 +282,10 @@ export default function RecruiterDashboard() {
     [dataMode]
   );
 
-  // Load sample evaluation dataset
+  // Load sample evaluation dataset (explicitly switches to mock mode)
   const handleLoadSample = () => {
+    setDataSourceMode("mock");
+    setDataMode("mock");
     const sample = getMockEvaluationResult();
     setEvaluationResult(sample);
     if (sample.candidates.length > 0) {
@@ -528,7 +564,7 @@ export default function RecruiterDashboard() {
                     Candidate Shortlisting Leaderboard
                   </h2>
                   <p className="text-xs text-zinc-500">
-                    Deterministic ranking derived from: 0.35·Req + 0.30·Sem + 0.25·Lex + 0.10·Pref
+                    Deterministic ranking derived from: 0.35·Req + 0.35·Sem + 0.20·Lex + 0.10·Pref
                   </p>
                 </div>
                 <span className="text-xs text-zinc-500 font-mono">
@@ -585,7 +621,7 @@ export default function RecruiterDashboard() {
           <div className="flex items-center gap-2">
             <span className="font-semibold text-zinc-300">Nexora Engine</span>
             <span>•</span>
-            <span>Formula: 0.35·S_req + 0.30·S_sem + 0.25·S_lex + 0.10·S_pref</span>
+            <span>Formula: 0.35·S_req + 0.35·S_sem + 0.20·S_lex + 0.10·S_pref</span>
             <span>•</span>
             <span className="font-mono text-[11px] text-zinc-400">
               Active Mode: {dataMode.toUpperCase()}

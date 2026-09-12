@@ -139,6 +139,7 @@ export async function getAnalysisStatus(
 
 /**
  * Retrieve full candidate rankings and evaluation results.
+ * In Live API mode, failures bubble up directly without substituting mock data.
  */
 export async function getRankings(
   jobId?: string,
@@ -151,23 +152,20 @@ export async function getRankings(
     return adaptEvaluationResult(getMockEvaluationResult());
   }
 
-  try {
-    const raw = await apiClient<unknown>(
-      API_ENDPOINTS.evaluation.rankings(jobId),
-      {
-        signal: options?.signal,
-      },
-      options?.timeoutMs
-    );
-    return adaptEvaluationResult(raw);
-  } catch (err: unknown) {
-    console.warn("Could not load rankings from backend, falling back to mock:", err);
-    return adaptEvaluationResult(getMockEvaluationResult());
-  }
+  // Live API Mode: call backend directly without mock fallback
+  const raw = await apiClient<unknown>(
+    API_ENDPOINTS.evaluation.rankings(jobId),
+    {
+      signal: options?.signal,
+    },
+    options?.timeoutMs
+  );
+  return adaptEvaluationResult(raw);
 }
 
 /**
  * Retrieve individual candidate evaluation dossier with granular evidence.
+ * In Live API mode, failures return null or bubble up, never falling back to mock.
  */
 export async function getCandidate(
   candidateId: string,
@@ -176,10 +174,14 @@ export async function getCandidate(
 ): Promise<CandidateEvaluation | null> {
   const mode = getDataSourceMode();
 
-  if (mode === "mock" || candidateId.startsWith("MOCK-")) {
+  if (mode === "mock") {
     await new Promise((resolve) => setTimeout(resolve, 100));
     const mock = getMockCandidateById(candidateId);
     return mock ? adaptCandidate(mock) : null;
+  }
+
+  if (candidateId.startsWith("MOCK-")) {
+    return null;
   }
 
   try {
@@ -193,13 +195,13 @@ export async function getCandidate(
     return raw ? adaptCandidate(raw) : null;
   } catch (err: unknown) {
     console.warn(`Could not load candidate '${candidateId}':`, err);
-    const mock = getMockCandidateById(candidateId);
-    return mock ? adaptCandidate(mock) : null;
+    return null;
   }
 }
 
 /**
  * Request pairwise contrastive comparison between Candidate A and Candidate B.
+ * In Live API mode, failures return null or bubble up, never falling back to mock.
  */
 export async function compareCandidates(
   candidateAId: string,
@@ -209,14 +211,14 @@ export async function compareCandidates(
 ): Promise<PairwiseComparison | null> {
   const mode = getDataSourceMode();
 
-  if (
-    mode === "mock" ||
-    candidateAId.startsWith("MOCK-") ||
-    candidateBId.startsWith("MOCK-")
-  ) {
+  if (mode === "mock") {
     await new Promise((resolve) => setTimeout(resolve, 150));
     const mock = getMockPairwiseComparison(candidateAId, candidateBId);
     return mock ? adaptPairwiseComparison(mock) : null;
+  }
+
+  if (candidateAId.startsWith("MOCK-") || candidateBId.startsWith("MOCK-")) {
+    return null;
   }
 
   try {
@@ -230,7 +232,6 @@ export async function compareCandidates(
     return adaptPairwiseComparison(raw);
   } catch (err: unknown) {
     console.warn(`Could not compare '${candidateAId}' and '${candidateBId}':`, err);
-    const mock = getMockPairwiseComparison(candidateAId, candidateBId);
-    return mock ? adaptPairwiseComparison(mock) : null;
+    return null;
   }
 }

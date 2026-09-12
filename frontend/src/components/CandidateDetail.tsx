@@ -102,7 +102,7 @@ export default function CandidateDetail({
               Deterministic Score Transparency
             </h4>
             <span className="text-[11px] text-zinc-500 font-mono">
-              Final = 0.35·Req + 0.30·Sem + 0.25·Lex + 0.10·Pref
+              Final = 0.35·Req + 0.35·Sem + 0.20·Lex + 0.10·Pref
             </span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 bg-zinc-950/40 p-3.5 rounded-lg border border-zinc-800/80">
@@ -115,13 +115,13 @@ export default function CandidateDetail({
             <ScoreBar
               value={c.semantic_score}
               label="Semantic Requirement Alignment"
-              weight="30%"
+              weight="35%"
               color="bg-cyan-500"
             />
             <ScoreBar
               value={c.lexical_score}
               label="Contextual Keyword Score"
-              weight="25%"
+              weight="20%"
               color="bg-violet-500"
             />
             <ScoreBar

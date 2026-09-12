@@ -2,18 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 // Verify deterministic score fusion formula
-test("Deterministic score fusion formula matches 0.35 Req + 0.30 Sem + 0.25 Lex + 0.10 Pref", () => {
+test("Deterministic score fusion formula matches 0.35 Req + 0.35 Sem + 0.20 Lex + 0.10 Pref", () => {
   const req = 0.875;
   const sem = 0.82;
   const lex = 0.91;
   const pref = 0.60;
 
-  const expected = 0.35 * req + 0.30 * sem + 0.25 * lex + 0.10 * pref;
+  const expected = 0.35 * req + 0.35 * sem + 0.20 * lex + 0.10 * pref;
   // 0.35*0.875 = 0.30625
-  // 0.30*0.82  = 0.246
-  // 0.25*0.91  = 0.2275
+  // 0.35*0.82  = 0.287
+  // 0.20*0.91  = 0.182
   // 0.10*0.60  = 0.06
-  // Sum = 0.83975 (~0.84-0.87 depending on weights)
+  // Sum = 0.83525
 
   assert.ok(expected > 0.80 && expected < 0.90, `Score ${expected} within expected high-rank range`);
 });
