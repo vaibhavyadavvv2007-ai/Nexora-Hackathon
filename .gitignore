@@ -3,3 +3,4 @@
 /.codex
 /.impeccable
 /node_modules
+.vercel

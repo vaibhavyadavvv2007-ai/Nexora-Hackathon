@@ -1,0 +1,21 @@
+{
+  "project_name": "nexora",
+  "project_title": "Nexora - Smart Shortlisting Engine",
+  "hackathon": "InternLoom AI Hackathon",
+  "workflow": "gsd",
+  "tech_stack": {
+    "backend": "python",
+    "pdf_extraction": "PyMuPDF (fitz)",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "semantic_similarity": "scikit-learn / cosine_similarity",
+    "keyword_matching": "rapidfuzz",
+    "data_validation": "pydantic",
+    "ui": "streamlit"
+  },
+  "scoring_weights": {
+    "required_skill_coverage": 0.35,
+    "preferred_skill_coverage": 0.10,
+    "keyword_score": 0.25,
+    "semantic_score": 0.30
+  }
+}
