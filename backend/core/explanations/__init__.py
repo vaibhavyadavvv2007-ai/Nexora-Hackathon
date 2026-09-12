@@ -49,3 +49,12 @@ class BaseExplainer(ABC):
             the deltas in required skill coverage, semantic alignment, and keyword evidence.
         """
         raise NotImplementedError
+
+
+from backend.core.explanations.explainer import TemplateExplainer
+
+__all__ = [
+    "BaseExplainer",
+    "PairwiseComparisonResult",
+    "TemplateExplainer",
+]

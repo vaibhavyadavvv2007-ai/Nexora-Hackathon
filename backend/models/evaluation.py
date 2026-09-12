@@ -1,5 +1,5 @@
 from typing import Any, List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 from backend.models.evidence import EvidenceChunk, MatchEvidence
 from backend.models.requirement import Requirement
 from backend.models.skill import Skill
@@ -69,6 +69,10 @@ class CandidateEvaluation(BaseModel):
         description="All extracted candidate evidence chunks cited in evaluation"
     )
     rank: Optional[int] = Field(default=None, ge=1, description="Final candidate rank (1-indexed)")
+    explanation: str = Field(
+        default="",
+        description="Deterministic factual candidate evaluation justification"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -80,26 +84,37 @@ class CandidateEvaluation(BaseModel):
                 data["semantic_matches"] = data.pop("semantic_evidence")
         return data
 
+    @computed_field
+    @property
+    def name(self) -> str:
+        """Alias for candidate_name for frontend compatibility."""
+        return self.candidate_name
+
+    @computed_field
     @property
     def required_coverage(self) -> Optional[float]:
         """Convenience accessor for required skill coverage score."""
         return self.scores.required_skill_coverage
 
+    @computed_field
     @property
     def preferred_coverage(self) -> Optional[float]:
         """Convenience accessor for preferred skill coverage score."""
         return self.scores.preferred_skill_coverage
 
+    @computed_field
     @property
     def lexical_score(self) -> Optional[float]:
         """Convenience accessor for contextual lexical relevance score."""
         return self.scores.contextual_lexical_relevance
 
+    @computed_field
     @property
     def semantic_score(self) -> Optional[float]:
         """Convenience accessor for semantic requirement alignment score."""
         return self.scores.semantic_requirement_alignment
 
+    @computed_field
     @property
     def final_score(self) -> Optional[float]:
         """Convenience accessor for fused final score."""

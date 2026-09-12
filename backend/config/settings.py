@@ -16,6 +16,15 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Nexora Smart Shortlisting Engine"
     DEBUG: bool = False
+    CORS_ORIGINS: List[str] = Field(
+        default=[
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ],
+        description="Allowed CORS origins for frontend integration"
+    )
 
     # Document Extraction & Constraints
     MIN_EXTRACTION_CHAR_COUNT: int = Field(

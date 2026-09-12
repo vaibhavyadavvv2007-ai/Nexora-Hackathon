@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, Field
 from backend.models.enums import MatchType, SectionType
 
@@ -11,3 +12,12 @@ class Skill(BaseModel):
     section: SectionType = Field(default=SectionType.SKILLS, description="Document section where skill was found")
     source_page: int = Field(default=1, ge=1, description="1-indexed source PDF page number")
 
+    @property
+    def name(self) -> str:
+        """Alias for surface_form or canonical_name for frontend compatibility."""
+        return self.surface_form or self.canonical_name
+
+    @property
+    def canonical(self) -> str:
+        """Alias for canonical_name for frontend compatibility."""
+        return self.canonical_name
