@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,26 +8,17 @@ from backend.app.api.evaluation import router as evaluation_router
 from backend.app.api.health import router as health_router
 from backend.app.api.jobs import router as jobs_router
 from backend.app.api.resumes import router as resumes_router
-from backend.app.store import get_store
 from backend.config.settings import get_settings
-from backend.core.pipeline import get_pipeline
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Auto-load official Sample JD if available and no job stored
-    try:
-        sample_jd_path = Path("data/official/Sample_JD.pdf")
-        if sample_jd_path.exists():
-            store = get_store()
-            if not store.get_job():
-                pipeline = get_pipeline()
-                content = sample_jd_path.read_bytes()
-                jd = pipeline.parse_job_description(source=content, doc_id="official_sample_jd")
-                jd.source_file = "Sample_JD.pdf"
-                store.save_job(jd)
-    except Exception as exc:
-        print(f"Warning: Could not pre-load sample JD: {exc}")
+    # The backend intentionally starts with an EMPTY in-memory store.
+    # No candidate is auto-ingested or auto-evaluated at startup: Live API Mode
+    # must show results ONLY after an explicit JD upload + resume ingestion +
+    # analysis run through the /api/jobs, /api/resumes, and /api/evaluation
+    # endpoints. Evaluation state lives purely in memory, so a fresh backend
+    # restart always begins with zero candidates.
     yield
 
 

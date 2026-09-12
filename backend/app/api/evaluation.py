@@ -30,7 +30,7 @@ def _run_pipeline_worker(job_id: str, task_id: str) -> None:
     store = get_store()
     pipeline = get_pipeline()
 
-    jd = store.get_job(job_id)
+    jd = store.get_job(job_id) or store.get_job()
     if not jd:
         store.update_task(
             task_id=task_id,
@@ -42,7 +42,7 @@ def _run_pipeline_worker(job_id: str, task_id: str) -> None:
         return
 
     # Retrieve all raw resume files stored for this job
-    file_records = store.get_resume_files(job_id)
+    file_records = store.get_resume_files(jd.id)
     if not file_records:
         # Check if we already have parsed resumes
         parsed_resumes = store.get_parsed_resumes(job_id)
@@ -108,7 +108,7 @@ async def start_evaluation(
 ) -> StartAnalysisResponse:
     """Trigger shortlisting pipeline across job description and candidate resumes."""
     store = get_store()
-    jd = store.get_job(job_id)
+    jd = store.get_job(job_id) or store.get_job()
     if not jd:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
