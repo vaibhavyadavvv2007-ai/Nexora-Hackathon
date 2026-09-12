@@ -1,5 +1,5 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field
+from typing import Any, List, Optional
+from pydantic import BaseModel, Field, model_validator
 from backend.models.evidence import EvidenceChunk, MatchEvidence
 from backend.models.requirement import Requirement
 from backend.models.skill import Skill
@@ -69,3 +69,48 @@ class CandidateEvaluation(BaseModel):
         description="All extracted candidate evidence chunks cited in evaluation"
     )
     rank: Optional[int] = Field(default=None, ge=1, description="Final candidate rank (1-indexed)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _remap_evidence_aliases(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "keyword_evidence" in data and "keyword_matches" not in data:
+                data["keyword_matches"] = data.pop("keyword_evidence")
+            if "semantic_evidence" in data and "semantic_matches" not in data:
+                data["semantic_matches"] = data.pop("semantic_evidence")
+        return data
+
+    @property
+    def required_coverage(self) -> Optional[float]:
+        """Convenience accessor for required skill coverage score."""
+        return self.scores.required_skill_coverage
+
+    @property
+    def preferred_coverage(self) -> Optional[float]:
+        """Convenience accessor for preferred skill coverage score."""
+        return self.scores.preferred_skill_coverage
+
+    @property
+    def lexical_score(self) -> Optional[float]:
+        """Convenience accessor for contextual lexical relevance score."""
+        return self.scores.contextual_lexical_relevance
+
+    @property
+    def semantic_score(self) -> Optional[float]:
+        """Convenience accessor for semantic requirement alignment score."""
+        return self.scores.semantic_requirement_alignment
+
+    @property
+    def final_score(self) -> Optional[float]:
+        """Convenience accessor for fused final score."""
+        return self.scores.final_score
+
+    @property
+    def keyword_evidence(self) -> List[MatchEvidence]:
+        """Convenience accessor for keyword matches evidence."""
+        return self.keyword_matches
+
+    @property
+    def semantic_evidence(self) -> List[MatchEvidence]:
+        """Convenience accessor for semantic matches evidence."""
+        return self.semantic_matches
