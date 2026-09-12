@@ -7,7 +7,7 @@ import {
   getCandidateDetail,
   getPairwiseComparison,
 } from "@/services/api";
-import { getMockProcessingStatus } from "@/data/mock-data";
+import { getMockProcessingStatus } from "@/lib/mock/candidateEvaluations";
 
 export function useEvaluation() {
   const [result, setResult] = useState<EvaluationResult | null>(null);

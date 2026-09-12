@@ -1,90 +1,127 @@
 // ============================================================
-// Service Layer — Abstracts data source for future backend swap
-// Replace mock implementations with fetch() calls when FastAPI is ready
+// Nexora Service Layer
+// Canonical facade exposing typed domain operations to UI components
 // ============================================================
 
 import {
+  uploadJobDescription,
+  uploadResumes,
+  startAnalysis,
+  getAnalysisStatus,
+  getRankings,
+  getCandidate,
+  compareCandidates,
+  getJobDescription,
+  apiClient,
+  ApiError,
+  getDataSourceMode,
+  setDataSourceMode,
+  API_BASE_URL,
+  API_ENDPOINTS,
+} from "@/lib/api";
+
+import type {
   CandidateEvaluation,
   EvaluationResult,
   PairwiseComparison,
   ProcessingStatus,
+  StartAnalysisResponse,
 } from "@/types";
-import {
-  getMockEvaluationResult,
-  getMockProcessingStatus,
-  getMockPairwiseComparison,
-  getMockCandidateById,
-} from "@/data/mock-data";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export type {
+  CandidateEvaluation,
+  EvaluationResult,
+  PairwiseComparison,
+  ProcessingStatus,
+  ResumeBatchUploadResponse,
+  StartAnalysisResponse,
+  RequestLifecycleOptions,
+  FastApiErrorResponse,
+} from "@/types";
 
-// Simulates network latency for realistic UI testing
-function simulateDelay(ms: number = 400): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// Authoritative 7 Operations explicitly available through the service layer
+export {
+  uploadJobDescription,
+  uploadResumes,
+  startAnalysis,
+  getAnalysisStatus,
+  getRankings,
+  getCandidate,
+  compareCandidates,
+};
+
+// Transport & Configuration exports
+export {
+  getJobDescription,
+  apiClient,
+  ApiError,
+  getDataSourceMode,
+  setDataSourceMode,
+  API_BASE_URL,
+  API_ENDPOINTS,
+};
+
+// Re-export adapters for testability and custom normalization
+export * from "@/lib/api/adapters";
+
+// ============================================================
+// High-Level Workflow Helpers (Backward Compatibility)
+// ============================================================
 
 /**
- * Submit a job description and batch of resumes for evaluation.
- * Currently returns mock data; replace with POST to /api/evaluate
+ * End-to-end evaluation pipeline coordinator.
  */
 export async function submitEvaluation(
-  _jobDescriptionFile: File | null,
-  _resumeFiles: File[]
+  jobDescriptionFile: File | null,
+  resumeFiles: File[]
 ): Promise<EvaluationResult> {
-  // Future: POST to `${API_BASE_URL}/api/evaluate` with FormData
-  await simulateDelay(1200);
-  return getMockEvaluationResult();
+  let jobId = "job-current";
+  if (jobDescriptionFile) {
+    const jd = await uploadJobDescription(jobDescriptionFile);
+    jobId = jd.id;
+  }
+  if (resumeFiles.length > 0) {
+    await uploadResumes(resumeFiles, jobId);
+  }
+  const task: StartAnalysisResponse = await startAnalysis(jobId, resumeFiles);
+  await getAnalysisStatus(task.task_id);
+  return getRankings(jobId);
 }
 
 /**
- * Poll processing status.
- * Currently returns mock status; replace with GET /api/status/:id
+ * Status retrieval helper with optional mock stage override.
  */
 export async function getProcessingStatus(
-  _jobId: string,
+  jobId: string,
   stage: ProcessingStatus["stage"] = "complete"
 ): Promise<ProcessingStatus> {
-  // Future: GET `${API_BASE_URL}/api/status/${jobId}`
-  await simulateDelay(200);
-  return getMockProcessingStatus(stage);
+  return getAnalysisStatus(jobId, stage);
 }
 
 /**
- * Fetch a single candidate's evaluation details.
- * Currently returns mock data; replace with GET /api/candidates/:id
+ * Candidate detail dossier lookup.
  */
 export async function getCandidateDetail(
   candidateId: string
 ): Promise<CandidateEvaluation | null> {
-  // Future: GET `${API_BASE_URL}/api/candidates/${candidateId}`
-  await simulateDelay(300);
-  return getMockCandidateById(candidateId);
+  return getCandidate(candidateId);
 }
 
 /**
- * Fetch pairwise comparison between two candidates.
- * Currently returns mock data; replace with GET /api/compare?a=X&b=Y
+ * Pairwise contrastive comparison lookup.
  */
 export async function getPairwiseComparison(
   candidateAId: string,
   candidateBId: string
 ): Promise<PairwiseComparison | null> {
-  // Future: GET `${API_BASE_URL}/api/compare?a=${candidateAId}&b=${candidateBId}`
-  await simulateDelay(400);
-  return getMockPairwiseComparison(candidateAId, candidateBId);
+  return compareCandidates(candidateAId, candidateBId);
 }
 
 /**
- * Fetch the full evaluation result set.
- * Currently returns mock data; replace with GET /api/results/:jobId
+ * Full ranking results lookup.
  */
 export async function getEvaluationResults(
-  _jobId: string
+  jobId?: string
 ): Promise<EvaluationResult> {
-  // Future: GET `${API_BASE_URL}/api/results/${jobId}`
-  await simulateDelay(300);
-  return getMockEvaluationResult();
+  return getRankings(jobId);
 }
-
-// Export the base URL for health checks
-export { API_BASE_URL };
