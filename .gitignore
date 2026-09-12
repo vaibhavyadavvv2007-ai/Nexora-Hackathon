@@ -8,4 +8,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .env
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
 
