@@ -53,6 +53,11 @@ class JobDescriptionParser:
             page_num = block.page_number
 
             for line in lines:
+                # Check if line indicates non-requirement section (e.g. Soft Skills, About the Role)
+                if SectionClassifier.is_non_requirement_jd_header(line):
+                    current_tier = None
+                    continue
+
                 # Check if line is a tier header (e.g. "Requirements:", "Preferred Qualifications:")
                 detected_tier = SectionClassifier.classify_jd_header(line)
                 if detected_tier is not None:
@@ -63,18 +68,13 @@ class JobDescriptionParser:
                 if len(line) < 3 or line.startswith("===") or line.startswith("---"):
                     continue
 
-                # Skip explicit title lines or introductory metadata before tier headers
+                # Skip header/introductory metadata lines before the first requirement tier or in non-requirement sections
                 if current_tier is None:
-                    if re.match(r"^(?:job\s+title|role|position)\s*:", line, re.IGNORECASE) or (role_title and line == role_title):
-                        continue
-                    # If this line has no skills and is before any tier header, treat as intro chunk, not requirement
-                    skills_check = self.normalizer.extract_skills_from_text(line, SectionType.OTHER, page_num)
-                    if not skills_check:
-                        continue
+                    continue
 
-                # If we have a line of text, process it under current tier or fallback
-                tier = current_tier if current_tier is not None else RequirementType.REQUIRED
-                confidence = 0.95 if current_tier is not None else 0.60
+                # If we have a line of text, process it under current tier
+                tier = current_tier
+                confidence = 0.95
 
                 # Look for skill mentions to establish canonical requirements
                 skills_in_line = self.normalizer.extract_skills_from_text(
@@ -150,22 +150,24 @@ class JobDescriptionParser:
 
     def _extract_role_title(self, extraction: PDFExtractionResult) -> str:
         """Heuristically extract the role title from early blocks or text without fabricating defaults."""
-        for block in extraction.text_blocks[:3]:
+        for block in extraction.text_blocks[:4]:
             text = block.text.strip()
             # Explicit label match (e.g. "Job Title: Backend Engineer")
             match = re.search(r"^(?:job\s+title|role|position)\s*:\s*([^\n]+)", text, re.IGNORECASE)
             if match:
                 return match.group(1).strip()
 
-            first_line = text.split("\n")[0].strip()
-            # Recognize concise role-like titles
-            role_keywords = (
-                "engineer", "developer", "architect", "lead", "manager", "specialist",
-                "scientist", "intern", "analyst", "designer", "consultant", "administrator"
-            )
-            if 4 <= len(first_line) <= 60 and any(kw in first_line.lower() for kw in role_keywords):
-                if not first_line.lower().startswith(("summary", "about", "company", "responsibilities", "requirements")):
-                    return first_line
+            for raw_line in text.split("\n"):
+                line = raw_line.strip()
+                title_candidate = line.split("|")[0].strip()
+                # Recognize concise role-like titles
+                role_keywords = (
+                    "engineer", "developer", "architect", "lead", "manager", "specialist",
+                    "scientist", "intern", "analyst", "designer", "consultant", "administrator"
+                )
+                if 4 <= len(title_candidate) <= 60 and any(kw in title_candidate.lower() for kw in role_keywords):
+                    if not title_candidate.lower().startswith(("summary", "about", "company", "responsibilities", "requirements")):
+                        return title_candidate
 
         # Never invent a generic role title; return empty string to indicate unknown
         return ""

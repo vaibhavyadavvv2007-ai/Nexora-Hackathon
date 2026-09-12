@@ -48,6 +48,9 @@ class SkillNormalizer:
         "tensorflow": ["tensorflow", "tf"],
         "pandas": ["pandas"],
         "numpy": ["numpy"],
+        "jest": ["jest"],
+        "mocha": ["mocha"],
+        "agile": ["agile", "scrum", "agile/scrum"],
     }
 
     # Deterministic section hierarchy for deduplication: Experience/Projects > Skills > Certs > Summary > Education > Other
@@ -64,7 +67,7 @@ class SkillNormalizer:
 
     # Non-technical vocabulary to exclude from unknown-skill capture
     NON_TECH_STOPWORDS: Set[str] = {
-        "and", "or", "the", "with", "in", "to", "for", "of", "by", "on", "at", "as", "an",
+        "and", "or", "the", "with", "in", "to", "for", "of", "by", "on", "at", "as", "an", "it",
         "years", "year", "month", "months", "experience", "strong", "excellent", "good",
         "knowledge", "proficient", "proficiency", "familiar", "familiarity", "basic",
         "intermediate", "advanced", "skills", "skill", "tools", "tool", "frameworks",
@@ -100,11 +103,11 @@ class SkillNormalizer:
     def _clean_token(self, token: str) -> str:
         """Strip surrounding punctuation from a candidate skill token while preserving prefixes like .NET."""
         cleaned = token.strip()
-        cleaned = re.sub(r"^[•\-\*–—▪▫►:;,]+", "", cleaned).strip()
+        cleaned = re.sub(r"^[•\-\*–—▪▫►:;,\(\)\[\]{}]+", "", cleaned).strip()
         # Do not strip leading dot for .NET
         if not (cleaned.startswith(".") and len(cleaned) > 1 and cleaned[1:].isalpha()):
-            cleaned = re.sub(r"^[\s.:;,]+", "", cleaned).strip()
-        cleaned = re.sub(r"[\s:;,]+$", "", cleaned).strip()
+            cleaned = re.sub(r"^[\s.:;,\(\)\[\]{}]+", "", cleaned).strip()
+        cleaned = re.sub(r"[\s.:;,\(\)\[\]{}]+$", "", cleaned).strip()
         return cleaned
 
     def _is_technology_like(self, token: str, in_skills_section: bool = False) -> bool:
@@ -245,7 +248,7 @@ class SkillNormalizer:
 
         # 2. Conservative unknown-skill capture
         # If in skills section or text contains delimiter lists (commas, slashes, bullets)
-        delimiters_present = bool(re.search(r"[,|;\n•▪▫►]", text)) or section == SectionType.SKILLS
+        delimiters_present = bool(re.search(r"[,|;\n•▪▫►/()]", text)) or section == SectionType.SKILLS
         if delimiters_present:
             # Strip section header prefix if present (e.g. "Languages: Python, Go")
             content_to_split = text
@@ -254,7 +257,7 @@ class SkillNormalizer:
                 if len(header_part.strip()) <= 30:
                     content_to_split = rest
 
-            parts = re.split(r"[,|;\n•▪▫►]|\s+(?:and|&)\s+", content_to_split)
+            parts = re.split(r"[,|;\n•▪▫►/()]|\s+(?:and|&)\s+", content_to_split)
             for part in parts:
                 cleaned_part = self._clean_token(part)
                 if not cleaned_part:

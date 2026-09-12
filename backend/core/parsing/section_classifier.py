@@ -16,9 +16,27 @@ class SectionClassifier:
     ]
 
     JD_TIER_PATTERNS = [
-        (RequirementType.REQUIRED, re.compile(r"^(minimum\s+qualifications|basic\s+qualifications|must\s+have|required\s+qualifications|qualifications|requirements|required)\b[:\s-]*$", re.IGNORECASE)),
-        (RequirementType.PREFERRED, re.compile(r"^(preferred\s+qualifications|nice\s+to\s+have|preferred|bonus\s+points|bonus|desired\s+skills|good\s+to\s+have|pluses)\b[:\s-]*$", re.IGNORECASE)),
-        (RequirementType.RESPONSIBILITY, re.compile(r"^(responsibilities|what\s+you\s+will\s+do|what\s+you'll\s+do|key\s+responsibilities|duties|role\s+overview)\b[:\s-]*$", re.IGNORECASE)),
+        (
+            RequirementType.REQUIRED,
+            re.compile(
+                r"^(?:minimum\s+qualifications|basic\s+qualifications|must[\s-]+have(?:\s+(?:skills|qualifications|requirements))?|required\s+(?:skills|qualifications|requirements)|qualifications|requirements|required)\b[:\s-]*$",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            RequirementType.PREFERRED,
+            re.compile(
+                r"^(?:preferred\s+(?:skills|qualifications|requirements)|nice[\s-]+to[\s-]+have(?:\s+(?:skills|qualifications|requirements))?|preferred|bonus\s+points|bonus|desired\s+skills|good[\s-]+to[\s-]+have(?:\s+(?:skills|qualifications|requirements))?|pluses)\b[:\s-]*$",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            RequirementType.RESPONSIBILITY,
+            re.compile(
+                r"^(?:responsibilities|what\s+you\s+will\s+do|what\s+you\'ll\s+do|key\s+responsibilities|duties|role\s+overview)\b[:\s-]*$",
+                re.IGNORECASE,
+            ),
+        ),
     ]
 
     @classmethod
@@ -45,3 +63,21 @@ class SectionClassifier:
             if pattern.match(cleaned):
                 return req_type
         return None
+
+    NON_REQUIREMENT_PATTERNS = [
+        re.compile(
+            r"^(?:soft\s+skills|about\s+(?:the\s+role|us|company|the\s+team)|company\s+overview|who\s+we\s+are|benefits|perks|compensation|how\s+to\s+apply)\b[:\s-]*$",
+            re.IGNORECASE,
+        )
+    ]
+
+    @classmethod
+    def is_non_requirement_jd_header(cls, text: str) -> bool:
+        """Check if a text line matches a non-requirement JD heading (e.g. Soft Skills, About the Role)."""
+        cleaned = re.sub(r"^[\s#*\->]+", "", text).strip()
+        if len(cleaned) > 50:
+            return False
+        for pattern in cls.NON_REQUIREMENT_PATTERNS:
+            if pattern.match(cleaned):
+                return True
+        return False
